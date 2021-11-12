@@ -10,6 +10,7 @@ const getArgs = () => {
   return { url: args[0], fileName: args[1] };
 };
 
+//Check whether both required arguments have been provided
 const haveRequiredCmdlineArguments = (url, fileName) => {
   return (url !== undefined && fileName !== undefined);
 };
