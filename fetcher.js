@@ -4,8 +4,19 @@ const path = require('path');
 const { stdin: input, stdout:output } = require('process');
 const readline = require('readline');
 
+//Return first two cmdline args as object with keys url, fileName
+const getArgs = () => {
+  const args = process.argv.slice(2);
+  return { url: args[0], fileName: args[1] };
+};
+
 //Check if path is valid and invoke callback with true or false
 const checkPathIsValid = (pathToCheck, callback) => {
+  if (!pathToCheck) {
+    //User failed to provide a destination path/filename
+    callback(false);
+    return;
+  }
   fs.access(path.dirname(pathToCheck), (err) => {
     callback(err === null);
   });
@@ -50,7 +61,7 @@ const runChecks = (url, fileName, successCallback) => {
 };
 
 //Log some information about the error to the console
-const explainError = (err, res) => {
+const explainRequestError = (err, res) => {
   if (err || res.statusCode !== '200') {
     console.log("Error: couldn't retrieve page.");
     if (res) {
@@ -71,24 +82,18 @@ const explainError = (err, res) => {
 const retrieveAndSavePage = (url, fileName) => {
   request(url, (err, res, body) => {
     if (err || res.statusCode !== '200') {
-      explainError(err, res);
+      explainRequestError(err, res);
     } else {
       fs.writeFile(fileName, body, (err) => {
         if (err) {
-          console.log(err);
+          console.log(`Error while trying to write to ${fileName}: ${err}`);
         } else {
-          console.log(`Downloaded and saved ${Buffer.byteLength(body, 'utf8')} bytes to ${args[1]}`);
+          console.log(`Downloaded and saved ${Buffer.byteLength(body, 'utf8')} bytes to ${fileName}`);
         }
       });
     }
   });
 };
 
-const args = process.argv.slice(2);
-
-if (args.length >= 2) {
-  const url = args[0];
-  const fileName = args[1];
-  runChecks(url, fileName, retrieveAndSavePage);
-}
-
+const { url, fileName } = getArgs();
+runChecks(url, fileName, retrieveAndSavePage);
