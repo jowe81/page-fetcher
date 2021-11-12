@@ -10,13 +10,12 @@ const getArgs = () => {
   return { url: args[0], fileName: args[1] };
 };
 
+const haveRequiredCmdlineArguments = (url, fileName) => {
+  return (url !== undefined && fileName !== undefined);
+};
+
 //Check if path is valid and invoke callback with true or false
 const checkPathIsValid = (pathToCheck, callback) => {
-  if (!pathToCheck) {
-    //User failed to provide a destination path/filename
-    callback(false);
-    return;
-  }
   fs.access(path.dirname(pathToCheck), (err) => {
     callback(err === null);
   });
@@ -41,38 +40,40 @@ const getUserConfirmationToOverwrite = (callback)  => {
 
 //Confirm valid path and filename, then run successCallback
 const runChecks = (url, fileName, successCallback) => {
-  checkPathIsValid(fileName, valid => {
-    if (valid) {
-      checkFileExists(fileName, exists => {
-        if (exists) {
-          getUserConfirmationToOverwrite(confirmed => {
-            if (confirmed) {
-              successCallback(url, fileName);
-            }
-          });
-        } else {
-          successCallback(url, fileName);
-        }
-      });
-    } else {
-      console.log("Error: invalid destination path.");
-    }
-  });
+  if (haveRequiredCmdlineArguments(url, fileName)) {
+    checkPathIsValid(fileName, valid => {
+      if (valid) {
+        checkFileExists(fileName, exists => {
+          if (exists) {
+            getUserConfirmationToOverwrite(confirmed => {
+              if (confirmed) {
+                successCallback(url, fileName);
+              }
+            });
+          } else {
+            successCallback(url, fileName);
+          }
+        });
+      } else {
+        console.log("Error: invalid destination path.");
+      }
+    });
+  } else {
+    console.log(`Error: argument missing. \nCall syntax is: \n  node fetcher url fileName`);
+  }
 };
 
 //Log some information about the error to the console
 const explainRequestError = (err, res) => {
-  if (err || res.statusCode !== '200') {
-    console.log("Error: couldn't retrieve page.");
-    if (res) {
-      console.log(` -> http request itself succeeded`);
-      console.log(` -> http response code was: ${res.statusCode}`);
-    }
-    if (err) {
-      console.log(` -> ${err}`);
-      if (err.code === 'ENOTFOUND') {
-        console.log(` -> Could not resolve hostname`);
-      }
+  console.log("Error: couldn't retrieve page.");
+  if (res) {
+    console.log(` -> http request itself succeeded`);
+    console.log(` -> http response code was: ${res.statusCode}`);
+  }
+  if (err) {
+    console.log(` -> ${err}`);
+    if (err.code === 'ENOTFOUND') {
+      console.log(` -> Could not resolve hostname`);
     }
   }
 };
@@ -81,7 +82,7 @@ const explainRequestError = (err, res) => {
 //Assumes valid destination path and permission to overwrite if file exists
 const retrieveAndSavePage = (url, fileName) => {
   request(url, (err, res, body) => {
-    if (err || res.statusCode !== '200') {
+    if (err || res.statusCode !== 200) {
       explainRequestError(err, res);
     } else {
       fs.writeFile(fileName, body, (err) => {
