@@ -29,31 +29,37 @@ const getUserAuthorizationToOverwrite = (callback)  => {
   });
 };
 
-const retrieveAndSavePage = (url, fileName) => {
+const runChecks = (url, fileName, successCallback) => {
   checkPathExists(fileName, () => {
     //Path is okay - go ahead
     checkFileExists(fileName, (exists) => {
       if (exists) {
         getUserAuthorizationToOverwrite((overwriteConfirmed) => {
           if (overwriteConfirmed) {
-            request(url, (err, res, body) => {
-              fs.writeFile(fileName, body, (err) => {
-                if (err) {
-                  console.log(err);
-                } else {
-                  console.log(`Downloaded and saved ${Buffer.byteLength(body, 'utf8')} bytes to ${args[1]}`);
-                }
-              });
-            });
+            successCallback(url, fileName);
           }
         });
       } else {
         //File doesn't exist
+        successCallback(url, fileName);
       }
     });
   }, (err, msg) => {
     //Path invalid
     console.log(`An error occurred: ${msg}`);
+  });
+};
+
+//Assumes valid url, valid path and permission to overwrite if file exists
+const retrieveAndSavePage = (url, fileName) => {
+  request(url, (err, res, body) => {
+    fs.writeFile(fileName, body, (err) => {
+      if (err) {
+        console.log(err);
+      } else {
+        console.log(`Downloaded and saved ${Buffer.byteLength(body, 'utf8')} bytes to ${args[1]}`);
+      }
+    });
   });
 };
 
@@ -63,13 +69,6 @@ const args = process.argv.slice(2);
 if (args.length >= 2) {
   const url = args[0];
   const fileName = args[1];
-  fs.open(fileName, 'r', (err) => {
-    if (err && err.code === 'ENOENT') {
-      //File doesn't exist yet - go ahead
-      retrieveAndSavePage(url, fileName);
-    } else {
-      //File doesn't exist
-    }
-  });
+  runChecks(url, fileName, retrieveAndSavePage);
 }
 
