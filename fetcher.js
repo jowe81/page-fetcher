@@ -43,20 +43,44 @@ const runChecks = (url, fileName, successCallback) => {
           successCallback(url, fileName);
         }
       });
+    } else {
+      console.log("Error: invalid destination path.");
     }
   });
 };
 
-//Assumes valid url, valid path and permission to overwrite if file exists
+//Log some information about the error to the console
+const explainError = (err, res) => {
+  if (err || res.statusCode !== '200') {
+    console.log("Error: couldn't retrieve page.");
+    if (res) {
+      console.log(` -> http request itself succeeded`);
+      console.log(` -> http response code was: ${res.statusCode}`);
+    }
+    if (err) {
+      console.log(` -> ${err}`);
+      if (err.code === 'ENOTFOUND') {
+        console.log(` -> Could not resolve hostname`);
+      }
+    }
+  }
+};
+
+//Retrieve and save page from url to fileName
+//Assumes valid destination path and permission to overwrite if file exists
 const retrieveAndSavePage = (url, fileName) => {
   request(url, (err, res, body) => {
-    fs.writeFile(fileName, body, (err) => {
-      if (err) {
-        console.log(err);
-      } else {
-        console.log(`Downloaded and saved ${Buffer.byteLength(body, 'utf8')} bytes to ${args[1]}`);
-      }
-    });
+    if (err || res.statusCode !== '200') {
+      explainError(err, res);
+    } else {
+      fs.writeFile(fileName, body, (err) => {
+        if (err) {
+          console.log(err);
+        } else {
+          console.log(`Downloaded and saved ${Buffer.byteLength(body, 'utf8')} bytes to ${args[1]}`);
+        }
+      });
+    }
   });
 };
 
